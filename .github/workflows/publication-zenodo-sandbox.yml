@@ -1,0 +1,114 @@
+# SPDX-FileCopyrightText: 2023 German Aerospace Center (DLR), Forschungszentrum Jülich, Helmholtz-Zentrum Dresden-Rossendorf
+#
+# SPDX-License-Identifier: CC0-1.0
+
+name: Software Publication
+
+on:
+  push:
+    tags:
+      - "**"
+  # NOTE: Do not delete the trigger on closed pull requests, the HERMES workflow needs this.
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  hermes-prepare:
+    name: Prepare Metadata for Curation
+    runs-on: ubuntu-latest
+
+    if: >
+      github.event_name == 'push' && ! (
+        startsWith(github.ref_name, 'hermes/') ||
+        contains(github.event.head_commit.message, 'hermes/post')
+      )
+
+    permissions:
+      contents: write # Allow creation of new branches
+      pull-requests: write # Postprocessing should be able to create a pull request with changes
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install hermes
+      - run: hermes harvest
+      - run: hermes process
+      - run: hermes curate
+
+      - run: |
+          # Cache current branch for PR close job
+          git branch --show-current > .hermes/curate/target_branch
+
+          # Shorten the SHA for the PR title
+          SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c -8)
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
+
+          # If HEAD is detached (e.g., when a tag has been checked out),
+          # switch to new temporary branch hermes/tmp/<current ref>
+          if [ $(git branch --show-current | wc -l) -eq "0" ]; then
+            HERMES_TMP_BRANCH=hermes/tmp-$(git rev-parse --short HEAD)
+            git switch -c $HERMES_TMP_BRANCH
+            git push -u origin $HERMES_TMP_BRANCH
+          fi
+
+          # Create a curation branch
+          git branch -c "hermes/curate-$SHORT_SHA"
+          git push origin "hermes/curate-$SHORT_SHA"
+
+          # Explicitly add to-be-curated metadata (which is ignored via .gitignore!)
+          git add -f .hermes/curate
+      - uses: peter-evans/create-pull-request@v5
+        with:
+          base: hermes/curate-${{ env.SHORT_SHA }}
+          branch: hermes/curate-result-${{ env.SHORT_SHA }}
+          title: Metadata Curation for Commit ${{ env.SHORT_SHA }}
+          body: |
+            Please carefully review the attached metadata.
+            If you are satisfied with the result, you may merge this PR, which will trigger publication.
+            (Any temporary branches will be cleaned up.)
+          delete-branch: true
+
+  hermes-curate:
+    name: Publish Software with Curated Metadata
+    if: github.event.pull_request.merged == true && startsWith( github.base_ref , 'hermes/curate-')
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Allow creation of new branches
+      pull-requests: write # Postprocessing should be able to create a pull request with changes
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install hermes
+
+      - run: hermes deposit --initial -O invenio_rdm.auth_token ${{ secrets.ZENODO_SANDBOX }} --file README.md
+
+      # Delete all the curation branches
+      - run: |
+          for BRANCH in $(git ls-remote origin 'refs/heads/hermes/curate-*' | cut -f2 | cut -d'/' -f'3-'); do
+            git push origin --delete "$BRANCH"
+          done
+
+
+  hermes-cleanup:
+    name: Cleanup aborted curation branches
+    if: github.event.pull_request.merged == false && startsWith( github.base_ref , 'hermes/curate-')
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Allow creation of new branches
+      pull-requests: write # Postprocessing should be able to create a pull request with changes
+
+    steps:
+      - uses: actions/checkout@v3
+      # Delete all the curation branches
+      - run: |
+          for BRANCH in $(git ls-remote origin 'refs/heads/hermes/curate-*' | cut -f2 | cut -d'/' -f'3-'); do
+            git push origin --delete "$BRANCH"
+          done
