@@ -1,0 +1,37 @@
+{
+  "@context": [
+    "https://doi.org/10.5063/schema/codemeta-2.0",
+    {
+      "hermes": "https://software-metadata.pub/ns/hermes/"
+    }
+  ],
+  "@type": "SoftwareSourceCode",
+  "author": [
+    {
+      "@id": "https://orcid.org/0000-0003-4925-7248",
+      "@type": "Person",
+      "affiliation": {
+        "@type": "Organization",
+        "legalName": "German Aerospace Center (DLR)"
+      },
+      "familyName": "Druskat",
+      "givenName": "Stephan",
+      "email": "stephan.druskat@dlr.de"
+    }
+  ],
+  "codeRepository": "https://github.com/sdruskat/hermes-demo",
+  "datePublished": "2024-11-14",
+  "description": "This is a project to demonstrate automated software publication with HERMES CI workflows.",
+  "keywords": [
+    "HERMES",
+    "software publication",
+    "demo",
+    "Zenodo Sandbox",
+    "GitHub",
+    "continuous integration"
+  ],
+  "license": "https://spdx.org/licenses/CC0-1.0",
+  "name": "HERMES demo",
+  "url": "https://github.com/sdruskat/hermes-demo",
+  "version": "v0.1.0"
+}
