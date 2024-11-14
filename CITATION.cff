@@ -1,0 +1,29 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: HERMES demo
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Stephan
+    family-names: Druskat
+    email: stephan.druskat@dlr.de
+    affiliation: German Aerospace Center (DLR)
+    orcid: 'https://orcid.org/0000-0003-4925-7248'
+repository-code: 'https://github.com/sdruskat/hermes-demo'
+abstract: >-
+  This is a project to demonstrate automated software
+  publication with HERMES CI workflows.
+keywords:
+  - HERMES
+  - software publication
+  - demo
+  - Zenodo Sandbox
+  - GitHub
+  - continuous integration
+license: CC0-1.0
+version: v0.1.0
+date-released: '2024-11-14'
